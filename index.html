@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Robotic AI Prompt Architect</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Share+Tech+Mono&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark-metal: #0a0c10;
+            --panel-white: #f0f2f5;
+            --text-dark: #1a202c;
+            --accent-glow: #00d9ff;
+            --border-light: rgba(255, 255, 255, 0.5);
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-dark-metal);
+            color: #f0f2f5;
+            overflow: hidden; /* Mencegah scroll bar ganda karena canvas */
+        }
+        
+        /* Canvas untuk animasi 3D di background */
+        #bg-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: -1; /* Menempatkan canvas di belakang semua konten */
+        }
+
+        /* Kontainer utama untuk konten UI */
+        .main-container {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            height: 100vh;
+            overflow-y: auto; /* Memungkinkan scroll hanya untuk konten UI */
+        }
+
+        h1, h2, h3, label, button {
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+        
+        #generatedPrompt {
+            font-family: 'Share Tech Mono', monospace;
+        }
+
+        .control-panel {
+            background: linear-gradient(145deg, #ffffff, #d4d9e0);
+            border: 1px solid var(--border-light);
+            box-shadow: 
+                inset 0 2px 4px rgba(0,0,0,0.05),
+                0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        .category-btn {
+            background: linear-gradient(145deg, #3a414c, #1d2126);
+            border: 1px solid #111318;
+            color: #b0c4de;
+            box-shadow: inset 0 1px 1px rgba(255,255,255,0.1), 0 2px 3px rgba(0,0,0,0.5);
+            transition: all 0.2s ease-in-out;
+        }
+        .category-btn:hover {
+            background: linear-gradient(145deg, #4a515c, #2d3136);
+        }
+
+        .active-btn {
+            background: linear-gradient(145deg, #ffffff, #e0e5ec) !important;
+            color: var(--text-dark) !important;
+            border-color: #fff !important;
+            box-shadow: 
+                inset 0 2px 4px rgba(0,0,0,0.2),
+                0 0 15px var(--accent-glow),
+                0 0 5px #fff inset !important;
+            transform: translateY(1px);
+        }
+
+        .output-terminal {
+            background: rgba(10, 12, 16, 0.8);
+            backdrop-filter: blur(5px);
+            border: 1px solid var(--accent-glow);
+            box-shadow: 
+                inset 0 0 20px rgba(0, 217, 255, 0.2),
+                0 0 30px rgba(0, 217, 255, 0.2);
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar { width: 8px; height: 8px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #4a515c; border-radius: 10px; }
+        
+        .button-container {
+            max-height: 150px;
+            overflow-y: auto;
+            padding: 8px;
+            background-color: rgba(20, 23, 30, 0.5);
+            border-radius: 0.5rem;
+            border: 1px solid rgba(0,0,0,0.2);
+        }
+
+        @keyframes pulseGlow {
+            0%, 100% { text-shadow: 0 0 5px var(--accent-glow), 0 0 10px var(--accent-glow); }
+            50% { text-shadow: 0 0 10px var(--accent-glow), 0 0 20px var(--accent-glow); }
+        }
+        .header-glow {
+            animation: pulseGlow 4s infinite ease-in-out;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="bg-canvas"></canvas>
+
+    <div class="main-container custom-scrollbar">
+        <div class="container mx-auto p-4 md:p-8">
+            <header class="text-center mb-10">
+                <h1 class="text-4xl md:text-6xl font-black text-white header-glow">Prompt Architect</h1>
+                <p class="text-lg text-[var(--accent-glow)] mt-2 tracking-widest">3D Robotic Interface</p>
+            </header>
+
+            <main class="grid grid-cols-1 lg:grid-cols-5 gap-8">
+                <!-- Kolom Kiri: Control Panel -->
+                <div class="lg:col-span-3 control-panel p-6 rounded-2xl">
+                    <div class="space-y-6">
+                        <!-- Subjek -->
+                        <div>
+                            <label for="subject" class="block mb-2 text-xl text-slate-800">Core Subject & Action</label>
+                            <input type="text" id="subject" class="w-full bg-slate-200 border border-slate-400 text-slate-900 text-md rounded-lg focus:ring-2 focus:ring-[var(--accent-glow)] focus:border-[var(--accent-glow)] p-3 placeholder-slate-500" placeholder="e.g., a white ceramic android inspecting a holographic flower">
+                        </div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <!-- Kategori-kategori -->
+                            <div>
+                                <label class="block mb-2 text-lg text-slate-700">Art Style</label>
+                                <div id="artStyleContainer" class="button-container custom-scrollbar flex flex-wrap gap-2"></div>
+                            </div>
+                            <div>
+                                <label class="block mb-2 text-lg text-slate-700">Artist Influence</label>
+                                <div id="artistContainer" class="button-container custom-scrollbar flex flex-wrap gap-2"></div>
+                            </div>
+                            <div>
+                                <label class="block mb-2 text-lg text-slate-700">Lighting</label>
+                                <div id="lightingContainer" class="button-container custom-scrollbar flex flex-wrap gap-2"></div>
+                            </div>
+                            <div>
+                                <label class="block mb-2 text-lg text-slate-700">Composition & Lens</label>
+                                <div id="compositionContainer" class="button-container custom-scrollbar flex flex-wrap gap-2"></div>
+                            </div>
+                            <div>
+                                <label class="block mb-2 text-lg text-slate-700">Material & Texture</label>
+                                <div id="materialContainer" class="button-container custom-scrollbar flex flex-wrap gap-2"></div>
+                            </div>
+                            <div>
+                                <label class="block mb-2 text-lg text-slate-700">Atmosphere & Mood</label>
+                                <div id="moodContainer" class="button-container custom-scrollbar flex flex-wrap gap-2"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label class="block mb-2 text-lg text-slate-700">Quality & Detail</label>
+                            <div id="qualityContainer" class="flex flex-wrap gap-2"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Kolom Kanan: Output Terminal -->
+                <div class="lg:col-span-2">
+                    <div class="sticky top-8 output-terminal p-6 rounded-2xl">
+                        <h2 class="text-2xl text-white mb-4">Prompt Assembly Core</h2>
+                        <div class="relative">
+                            <textarea id="generatedPrompt" readonly class="w-full h-80 bg-transparent border-none text-[var(--accent-glow)] text-lg rounded-lg p-2 custom-scrollbar focus:outline-none" placeholder="[Awaiting assembly instructions...]"></textarea>
+                        </div>
+                        <div class="mt-4 flex flex-col sm:flex-row gap-3">
+                            <button id="copyButton" class="w-full bg-[var(--accent-glow)] hover:brightness-125 text-slate-900 font-bold py-3 px-4 rounded-lg transition duration-300 transform hover:scale-105">
+                                ENGAGE & COPY
+                            </button>
+                            <button id="resetButton" class="w-full bg-orange-600 hover:bg-orange-500 text-white font-bold py-3 px-4 rounded-lg transition duration-300 transform hover:scale-105">
+                                SYSTEM RESET
+                            </button>
+                        </div>
+                        <p id="copyFeedback" class="text-center text-[var(--accent-glow)] mt-3 h-5 font-mono"></p>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+    
+    <script>
+        // --- UI LOGIC SCRIPT (NO CHANGES) ---
+        // This script handles the prompt generation UI and remains unchanged.
+        const data = {
+            artStyles: ['Photorealistic', 'Hyperrealistic', 'Digital Painting', 'Concept Art', 'Oil Painting', 'Watercolor', 'Acrylic Painting', 'Charcoal Sketch', 'Ink Drawing', 'Anime Style', '90s Anime', 'Studio Ghibli Style', 'Manga Style', 'Comic Book Style', 'Cyberpunk', 'Steampunk', 'Dieselpunk', 'Solarpunk', 'Fantasy Art', 'Gothic Art', 'Biopunk', 'Pixel Art', 'Low Poly', 'Vector Art', 'Impressionism', 'Expressionism', 'Surrealism', 'Cubism', 'Pop Art', 'Minimalism', 'Art Nouveau', 'Ukiyo-e', 'Psychedelic Art', 'Vaporwave', 'Glitch Art', 'Baroque'],
+            artists: ['Greg Rutkowski', 'Artgerm', 'Alphonse Mucha', 'H.R. Giger', 'Zdzisław Beksiński', 'Hayao Miyazaki', 'Katsuhiro Otomo', 'James Gurney', 'Syd Mead', 'Moebius', 'Frank Frazetta', 'Caravaggio', 'Vincent van Gogh', 'Salvador Dalí'],
+            lightingStyles: ['Cinematic Lighting', 'Dramatic Lighting', 'Film Noir', 'Golden Hour', 'Blue Hour', 'Soft Light', 'Hard Light', 'Dappled Light', 'Overcast', 'Studio Lighting', 'Three-point Lighting', 'High-Key', 'Low-Key', 'Backlighting', 'Rim Lighting', 'Ambient Occlusion', 'Global Illumination', 'Neon Lighting', 'Volumetric Lighting', 'Caustic Lighting', 'Glowing', 'Bioluminescent', 'Candlelight', 'Moonlight', 'Firelight', 'Iridescent', 'Lens Flare'],
+            compositions: ['Close-up', 'Extreme Close-up', 'Medium Shot', 'Full Body Shot', 'Wide Shot', 'Ultra-wide Shot', 'Landscape', 'Portrait', 'Bird\'s-eye View', 'Worm\'s-eye View', 'Low Angle', 'High Angle', 'Dutch Angle', 'Macro Shot', 'Symmetrical', 'Asymmetrical', 'Rule of Thirds', 'Leading Lines', 'Depth of Field', 'Bokeh', '50mm lens', '85mm lens', 'Wide-angle lens', 'Telephoto lens', 'Fisheye lens'],
+            materials: ['Matte', 'Glossy', 'Metallic', 'Chrome', 'Velvet', 'Silk', 'Rough Stone', 'Polished Marble', 'Translucent', 'Holographic', 'Leather', 'Wood Grain', 'Carbon Fiber', 'Anodized Titanium', 'Rusty Metal', 'Circuit Board', 'Exposed Wires', 'White Ceramic', 'Black Obsidian'],
+            moods: ['Ethereal', 'Serene', 'Peaceful', 'Chaotic', 'Energetic', 'Mysterious', 'Ominous', 'Melancholic', 'Nostalgic', 'Whimsical', 'Epic', 'Heroic', 'Lonely', 'Cozy', 'Futuristic', 'Ancient', 'Dystopian', 'Utopian', 'Clinical', 'Sterile'],
+            qualityBoosters: ['masterpiece', 'best quality', '4k', '8k', 'ultra-detailed', 'intricate', 'sharp focus', 'professional', 'award-winning', 'trending on artstation', 'physically-based rendering', 'unreal engine 5', 'octane render']
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const subjectInput = document.getElementById('subject');
+            const containers = {
+                artStyle: document.getElementById('artStyleContainer'),
+                artist: document.getElementById('artistContainer'),
+                lighting: document.getElementById('lightingContainer'),
+                composition: document.getElementById('compositionContainer'),
+                material: document.getElementById('materialContainer'),
+                mood: document.getElementById('moodContainer'),
+                quality: document.getElementById('qualityContainer'),
+            };
+            const generatedPrompt = document.getElementById('generatedPrompt');
+            const copyButton = document.getElementById('copyButton');
+            const resetButton = document.getElementById('resetButton');
+            const copyFeedback = document.getElementById('copyFeedback');
+
+            function createButtons(container, items, isMultiSelect = false) {
+                items.forEach(item => {
+                    const button = document.createElement('button');
+                    button.textContent = item;
+                    button.className = 'category-btn px-3 py-1.5 rounded-md text-sm';
+                    button.addEventListener('click', () => {
+                        if (isMultiSelect) {
+                            button.classList.toggle('active-btn');
+                        } else {
+                            const currentActive = container.querySelector('.active-btn');
+                            if (currentActive === button) {
+                                button.classList.remove('active-btn');
+                            } else {
+                                if (currentActive) currentActive.classList.remove('active-btn');
+                                button.classList.add('active-btn');
+                            }
+                        }
+                        generatePrompt();
+                    });
+                    container.appendChild(button);
+                });
+            }
+
+            function generatePrompt() {
+                let promptParts = [];
+                const subject = subjectInput.value.trim();
+                if (subject) promptParts.push(subject);
+                const getActiveText = (container) => container.querySelector('.active-btn')?.textContent;
+                const artist = getActiveText(containers.artist);
+                if(artist) promptParts.push(`in the style of ${artist}`);
+                const artStyle = getActiveText(containers.artStyle);
+                if(artStyle) promptParts.push(artStyle);
+                const mood = getActiveText(containers.mood);
+                if(mood) promptParts.push(`${mood} atmosphere`);
+                const material = getActiveText(containers.material);
+                if(material) promptParts.push(`${material} texture`);
+                const lighting = getActiveText(containers.lighting);
+                if(lighting) promptParts.push(lighting);
+                const composition = getActiveText(containers.composition);
+                if(composition) promptParts.push(composition);
+                const activeQualities = containers.quality.querySelectorAll('.active-btn');
+                activeQualities.forEach(btn => promptParts.push(btn.textContent));
+                generatedPrompt.value = promptParts.join(', ');
+            }
+
+            function copyPrompt() {
+                if (!generatedPrompt.value) return;
+                navigator.clipboard.writeText(generatedPrompt.value).then(() => {
+                    copyFeedback.textContent = 'SEQUENCE COPIED TO CLIPBOARD';
+                    setTimeout(() => { copyFeedback.textContent = ''; }, 2000);
+                }).catch(err => {
+                    copyFeedback.textContent = 'ERROR: COPY PROTOCOL FAILED';
+                    console.error('Error copying text: ', err);
+                });
+            }
+
+            function resetAll() {
+                subjectInput.value = '';
+                document.querySelectorAll('.category-btn').forEach(btn => btn.classList.remove('active-btn'));
+                generatePrompt();
+            }
+
+            Object.keys(data).forEach(key => data[key].sort());
+            createButtons(containers.artStyle, data.artStyles);
+            createButtons(containers.artist, data.artists);
+            createButtons(containers.lighting, data.lightingStyles);
+            createButtons(containers.composition, data.compositions);
+            createButtons(containers.material, data.materials);
+            createButtons(containers.mood, data.moods);
+            createButtons(containers.quality, data.qualityBoosters, true);
+            subjectInput.addEventListener('input', generatePrompt);
+            copyButton.addEventListener('click', copyPrompt);
+            resetButton.addEventListener('click', resetAll);
+            generatePrompt();
+        });
+    </script>
+
+    <script>
+        // --- THREE.JS ANIMATION SCRIPT ---
+        // This new script handles the 3D animated background.
+        document.addEventListener('DOMContentLoaded', () => {
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            const renderer = new THREE.WebGLRenderer({
+                canvas: document.querySelector('#bg-canvas'),
+                alpha: true // Allows for transparent background
+            });
+
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+            // --- Objects in the Scene ---
+
+            const accentColor = 0x00d9ff;
+            const nodes = new THREE.Group();
+            const nodeGeometry = new THREE.IcosahedronGeometry(0.5, 0);
+            const nodeMaterial = new THREE.MeshStandardMaterial({
+                color: accentColor,
+                wireframe: true,
+                metalness: 0.5,
+                roughness: 0.2
+            });
+
+            const lines = [];
+
+            // Create nodes
+            for (let i = 0; i < 50; i++) {
+                const node = new THREE.Mesh(nodeGeometry, nodeMaterial);
+                const [x, y, z] = Array(3).fill().map(() => THREE.MathUtils.randFloatSpread(50));
+                node.position.set(x, y, z);
+                nodes.add(node);
+            }
+            scene.add(nodes);
+
+            // Create connecting lines
+            const lineMaterial = new THREE.LineBasicMaterial({ color: accentColor, transparent: true, opacity: 0.2 });
+            for (let i = 0; i < 25; i++) {
+                const startNode = nodes.children[Math.floor(Math.random() * nodes.children.length)];
+                const endNode = nodes.children[Math.floor(Math.random() * nodes.children.length)];
+                if (startNode !== endNode) {
+                    const points = [startNode.position, endNode.position];
+                    const lineGeometry = new THREE.BufferGeometry().setFromPoints(points);
+                    const line = new THREE.Line(lineGeometry, lineMaterial);
+                    scene.add(line);
+                }
+            }
+            
+            // Create particles
+            const particleCount = 5000;
+            const particlePositions = new Float32Array(particleCount * 3);
+            for (let i = 0; i < particleCount * 3; i++) {
+                particlePositions[i] = (Math.random() - 0.5) * 100;
+            }
+            const particleGeometry = new THREE.BufferGeometry();
+            particleGeometry.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
+            const particleMaterial = new THREE.PointsMaterial({
+                color: accentColor,
+                size: 0.05,
+                transparent: true,
+                opacity: 0.5
+            });
+            const particles = new THREE.Points(particleGeometry, particleMaterial);
+            scene.add(particles);
+
+            // --- Lighting ---
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.1);
+            scene.add(ambientLight);
+            const pointLight = new THREE.PointLight(accentColor, 2, 100);
+            scene.add(pointLight);
+
+            camera.position.z = 15;
+
+            // --- Mouse Interaction ---
+            const mouse = new THREE.Vector2();
+            window.addEventListener('mousemove', (event) => {
+                mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+                mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            });
+
+            // --- Animation Loop ---
+            const clock = new THREE.Clock();
+            function animate() {
+                requestAnimationFrame(animate);
+                const elapsedTime = clock.getElapsedTime();
+
+                // Animate nodes and particles
+                nodes.rotation.y = elapsedTime * 0.05;
+                nodes.rotation.x = elapsedTime * 0.02;
+                particles.rotation.y = -elapsedTime * 0.02;
+
+                // Make light follow mouse
+                pointLight.position.set(mouse.x * 10, mouse.y * 10, 5);
+
+                // Make camera slowly drift and react to mouse
+                camera.position.x += (mouse.x * 2 - camera.position.x) * 0.02;
+                camera.position.y += (mouse.y * 2 - camera.position.y) * 0.02;
+                camera.lookAt(scene.position);
+
+                renderer.render(scene, camera);
+            }
+            animate();
+
+            // --- Handle Window Resize ---
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            });
+        });
+    </script>
+</body>
+</html>
